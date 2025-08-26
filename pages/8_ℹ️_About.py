@@ -18,7 +18,7 @@ st.markdown("""
     <li><b>Coding Mentor:</b> reviews, debugging, concept explainers</li>
     <li><b>Wellness:</b> sentiment + emotions with supportive tips</li>
     <li><b>Quiz & Flashcards:</b> MCQs with animated feedback</li>
-    <li><b>No Dummy Data:</b> usage metrics update only when YOU interact</li>
+    <li><b>Real-time Metrics:</b> usage metrics update only when YOU interact</li>
   </ul>
 </div>
 """, unsafe_allow_html=True)
