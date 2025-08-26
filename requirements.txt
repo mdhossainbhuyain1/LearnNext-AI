@@ -1,0 +1,15 @@
+streamlit
+requests
+python-dotenv
+groq
+youtube-transcript-api
+yt-dlp
+pandas
+plotly
+numpy
+rouge-score
+streamlit-option-menu
+pypdf
+python-docx
+docx2txt
+faster-whisper
