@@ -83,67 +83,64 @@ def _section_header(title: str, emoji: str):
     </div>
     """, unsafe_allow_html=True)
 
+def _note_card(msg: str):
+    st.markdown(f"""
+    <div class="card pop" style="
+      border-left: 4px solid rgba(255,193,7,.9);
+      background: linear-gradient(135deg, rgba(15,26,48,.92), rgba(11,18,32,.92));
+      padding:16px;">
+      <div style="font-weight:700;margin-bottom:6px;">Note</div>
+      <div style="line-height:1.6;white-space:pre-wrap">{msg}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 # ----------------------------- Tabs -----------------------------
-tab1, tab2, tab3 = st.tabs([
-    "🎥 YouTube Video Summarizer",
+# Reordered: Long Text (1), Doc (2), YouTube (3)
+tab3, tab2, tab1 = st.tabs([
+    "📝 Long Text Summarizer",
     "📄 Doc Summarizer (PDF/DOCX/TXT)",
-    "📝 Long Text Summarizer"
+    "🎥 YouTube Video Summarizer"
 ])
 
 # =================================================================
-# Tab 1: YouTube video summarizer
+# Tab 3 (now first): Long text summarizer
 # =================================================================
-with tab1:
-    _section_header("YouTube → Transcript → Summary", "🎥")
-    url = st.text_input("YouTube URL", placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX")
+with tab3:
+    _section_header("Summarize long text", "📝")
 
+    tlong = st.text_area("Paste text to summarize", height=220)
     with st.expander("Summary options", expanded=False):
         c1, c2 = st.columns(2)
-        min_len = c1.slider("Min summary length", 20, 250, 50)
-        max_len = c2.slider("Max summary length", 60, 600, 220)
-        style = st.selectbox("Style (post-formatting)", ["Paragraph", "Bullet points"], index=0,
-                             help="Formatting only; content still comes from the model output.")
+        min_len3 = c1.slider("Min summary length", 20, 250, 50, key="tmin")
+        max_len3 = c2.slider("Max summary length", 60, 600, 220, key="tmax")
+        style3 = st.selectbox("Style (post-formatting)", ["Paragraph", "Bullet points"], index=0, key="tsty")
 
-    go = st.button("Fetch Transcript & Summarize", key="yt_sum", type="primary", use_container_width=True)
-
-    if go:
-        if not url.strip():
-            st.warning("Please paste a YouTube URL.")
+    if st.button("Summarize", key="long_sum", type="primary", use_container_width=True):
+        if not tlong.strip():
+            st.warning("Please paste some text.")
         else:
-            with st.spinner("Fetching transcript..."):
-                t = youtube_transcript(url)
-            st.text_area("Transcript", t, height=220)
-            if t and not t.lower().startswith(("invalid", "no transcript", "could not", "transcripts are disabled")):
-                _stat_chip(_reading_time(t))
-                record_event("transcripts", {"source": "youtube", "len": len(t)})
+            _stat_chip(_reading_time(tlong))
+            with st.spinner("Summarizing…"):
+                s = _smart_summarize(tlong, min_len=min_len3, max_len=max_len3)
 
-                with st.spinner("Summarizing…"):
-                    s = _smart_summarize(t, min_len=min_len, max_len=max_len)
+            if style3 == "Bullet points":
+                bullets = [f"- {x.strip()}" for x in s.split(". ") if x.strip()]
+                s = "\n".join(bullets)
 
-                if style == "Bullet points":
-                    bullets = [f"- {x.strip()}" for x in s.split(". ") if x.strip()]
-                    s = "\n".join(bullets)
+            st.markdown("### Summary")
+            st.markdown(f"""
+            <div class="card pop" style="border-left: 4px solid rgba(0,194,209,.65);">
+              <div style="line-height:1.6;white-space:pre-wrap">{s}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-                st.markdown("### Summary")
-                st.markdown(f"""
-                <div class="card pop" style="border-left: 4px solid rgba(0,194,209,.65);">
-                  <div style="line-height:1.6;white-space:pre-wrap">{s}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                colA, colB = st.columns(2)
-                colA.download_button("Download summary (.txt)", s, file_name="video_summary.txt", mime="text/plain",
-                                     use_container_width=True)
-                colB.download_button("Download transcript (.txt)", t, file_name="video_transcript.txt", mime="text/plain",
-                                     use_container_width=True)
-
-                record_event("summaries", {"chars": len(t), "source": "youtube"})
-                st.balloons()
-            else:
-                st.error(t or "Could not fetch transcript.")
+            st.download_button("Download summary (.txt)", s, file_name="text_summary.txt", mime="text/plain",
+                               use_container_width=True)
+            record_event("summaries", {"chars": len(tlong)})
+            st.balloons()
 
 # =================================================================
-# Tab 2: Document summarizer
+# Tab 2 (now second): Document summarizer
 # =================================================================
 with tab2:
     _section_header("Summarize a document", "📄")
@@ -187,38 +184,61 @@ with tab2:
                 st.balloons()
 
 # =================================================================
-# Tab 3: Long text summarizer
+# Tab 1 (now third): YouTube video summarizer
 # =================================================================
-with tab3:
-    _section_header("Summarize long text", "📝")
+with tab1:
+    _section_header("YouTube → Transcript → Summary", "🎥")
+    url = st.text_input("YouTube URL", placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX")
 
-    tlong = st.text_area("Paste text to summarize", height=220)
     with st.expander("Summary options", expanded=False):
         c1, c2 = st.columns(2)
-        min_len3 = c1.slider("Min summary length", 20, 250, 50, key="tmin")
-        max_len3 = c2.slider("Max summary length", 60, 600, 220, key="tmax")
-        style3 = st.selectbox("Style (post-formatting)", ["Paragraph", "Bullet points"], index=0, key="tsty")
+        min_len = c1.slider("Min summary length", 20, 250, 50)
+        max_len = c2.slider("Max summary length", 60, 600, 220)
+        style = st.selectbox("Style (post-formatting)", ["Paragraph", "Bullet points"], index=0,
+                             help="Formatting only; content still comes from the model output.")
 
-    if st.button("Summarize", key="long_sum", type="primary", use_container_width=True):
-        if not tlong.strip():
-            st.warning("Please paste some text.")
+    go = st.button("Fetch Transcript & Summarize", key="yt_sum", type="primary", use_container_width=True)
+
+    if go:
+        if not url.strip():
+            st.warning("Please paste a YouTube URL.")
         else:
-            _stat_chip(_reading_time(tlong))
-            with st.spinner("Summarizing…"):
-                s = _smart_summarize(tlong, min_len=min_len3, max_len=max_len3)
+            with st.spinner("Fetching transcript..."):
+                t = youtube_transcript(url)
 
-            if style3 == "Bullet points":
-                bullets = [f"- {x.strip()}" for x in s.split(". ") if x.strip()]
-                s = "\n".join(bullets)
+            # Always show what was returned (if anything)
+            st.text_area("Transcript", t, height=220)
 
-            st.markdown("### Summary")
-            st.markdown(f"""
-            <div class="card pop" style="border-left: 4px solid rgba(0,194,209,.65);">
-              <div style="line-height:1.6;white-space:pre-wrap">{s}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            # Success path (keep your original behavior)
+            if t and not t.lower().startswith(("invalid", "no transcript", "could not", "transcripts are disabled")):
+                _stat_chip(_reading_time(t))
+                record_event("transcripts", {"source": "youtube", "len": len(t)})
 
-            st.download_button("Download summary (.txt)", s, file_name="text_summary.txt", mime="text/plain",
-                               use_container_width=True)
-            record_event("summaries", {"chars": len(tlong)})
-            st.balloons()
+                with st.spinner("Summarizing…"):
+                    s = _smart_summarize(t, min_len=min_len, max_len=max_len)
+
+                if style == "Bullet points":
+                    bullets = [f"- {x.strip()}" for x in s.split(". ") if x.strip()]
+                    s = "\n".join(bullets)
+
+                st.markdown("### Summary")
+                st.markdown(f"""
+                <div class="card pop" style="border-left: 4px solid rgba(0,194,209,.65);">
+                  <div style="line-height:1.6;white-space:pre-wrap">{s}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                colA, colB = st.columns(2)
+                colA.download_button("Download summary (.txt)", s, file_name="video_summary.txt", mime="text/plain",
+                                     use_container_width=True)
+                colB.download_button("Download transcript (.txt)", t, file_name="video_transcript.txt", mime="text/plain",
+                                     use_container_width=True)
+
+                record_event("summaries", {"chars": len(t), "source": "youtube"})
+                st.balloons()
+            else:
+                # Replace error with a formatted NOTE as requested
+                _note_card(
+                    "Streamlit deployed version does not support YouTube Transcript API.\n"
+                    "Request to use this function: please use locally or choose another hosting platform."
+                )
